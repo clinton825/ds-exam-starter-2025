@@ -27,8 +27,8 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
     if (httpMethod === 'GET') {
       // New endpoint for exam question: /crew/{role}/movies/{movieId}
       if (path.includes('/crew/') && path.includes('/movies/')) {
-        const role = pathParams.role;
-        const movieId = parseInt(pathParams.movieId);
+        const role = pathParams.role as string;
+        const movieId = parseInt(pathParams.movieId as string);
         
         if (!role || isNaN(movieId)) {
           return {
@@ -104,7 +104,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
         };
       } else if (pathParams.movieId) {
         // Get crews for a specific movie
-        const movieId = parseInt(pathParams.movieId);
+        const movieId = parseInt(pathParams.movieId as string);
         
         if (pathParams.role) {
           // Get specific role for a movie
@@ -113,7 +113,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
               TableName: tableName,
               Key: {
                 movieId: movieId,
-                role: pathParams.role
+                role: pathParams.role as string
               }
             })
           );
@@ -245,14 +245,14 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
         };
       }
       
-      const movieId = parseInt(pathParams.movieId);
+      const movieId = parseInt(pathParams.movieId as string);
       
       await client.send(
         new DeleteCommand({
           TableName: tableName,
           Key: {
             movieId: movieId,
-            role: pathParams.role
+            role: pathParams.role as string
           }
         })
       );
