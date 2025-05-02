@@ -128,29 +128,35 @@ export class ExamStack extends cdk.Stack {
       },
     });
     
-    // Connect Topic1 to QueueA and QueueB as per the diagram
+    // Connect Topic1 to QueueA and QueueB as per the  architecture diagram
     
     // Part B: Only allow messages with country=Ireland or China to Queue A
     topic1.addSubscription(new subs.SqsSubscription(queueA, {
       filterPolicy: {
-        // This filter matches the nested path address.country
-        "address.country": sns.SubscriptionFilter.stringFilter({
+        // For message body filtering, we need to use the MessageAttributes approach
+        // because SNS doesn't natively support deep JSON path filtering
+        "MessageAttributes.country.StringValue": sns.SubscriptionFilter.stringFilter({
           allowlist: ['Ireland', 'China']
+        }),
+        "MessageAttributes.email_exists.StringValue": sns.SubscriptionFilter.stringFilter({
+          allowlist: ['true']
         })
       },
-      rawMessageDelivery: true // Ensures messages are delivered without SNS envelope
+      rawMessageDelivery: true 
     }));
     
     // Part C: Queue B should receive messages missing an email property
-    // but still from Ireland or China
+   
     topic1.addSubscription(new subs.SqsSubscription(queueB, {
       filterPolicy: {
-        // This filter matches the nested path address.country
-        "address.country": sns.SubscriptionFilter.stringFilter({
+        // Filter to allow only Ireland or China
+        "MessageAttributes.country.StringValue": sns.SubscriptionFilter.stringFilter({
           allowlist: ['Ireland', 'China']
         }),
-        // Unfortunately, SNS doesn't support direct "attribute doesn't exist" filtering
-        // We'll need to handle this in the Lambda function for Queue B
+        // Filter to allow only messages missing email
+        "MessageAttributes.email_exists.StringValue": sns.SubscriptionFilter.stringFilter({
+          allowlist: ['false']
+        })
       },
       rawMessageDelivery: true
     }));
@@ -158,7 +164,7 @@ export class ExamStack extends cdk.Stack {
     // Connect QueueA to LambdaX as per the diagram
     lambdaXFn.addEventSource(new events.SqsEventSource(queueA));
     
-    // Grant necessary permissions
+   
     table.grantReadWriteData(lambdaXFn);
     topic1.grantPublish(lambdaXFn);
   }
