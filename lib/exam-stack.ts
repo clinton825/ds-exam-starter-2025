@@ -128,43 +128,27 @@ export class ExamStack extends cdk.Stack {
       },
     });
     
-    // Connect Topic1 to QueueA and QueueB as per the  architecture diagram
+    // Connect Topic1 to QueueA and QueueB as per the architecture diagram
     
-    // Part B: Only allow messages with country=Ireland or China to Queue A
+    // We'll simplify our filter policies and rely on Lambda functions to do the filtering
+    // This means all messages will go to both queues
     topic1.addSubscription(new subs.SqsSubscription(queueA, {
-      filterPolicy: {
-        // For message body filtering, we need to use the MessageAttributes approach
-        // because SNS doesn't natively support deep JSON path filtering
-        "MessageAttributes.country.StringValue": sns.SubscriptionFilter.stringFilter({
-          allowlist: ['Ireland', 'China']
-        }),
-        "MessageAttributes.email_exists.StringValue": sns.SubscriptionFilter.stringFilter({
-          allowlist: ['true']
-        })
-      },
       rawMessageDelivery: true 
     }));
     
     // Part C: Queue B should receive messages missing an email property
-   
+    // We'll let Lambda Y handle the filtering logic
     topic1.addSubscription(new subs.SqsSubscription(queueB, {
-      filterPolicy: {
-        // Filter to allow only Ireland or China
-        "MessageAttributes.country.StringValue": sns.SubscriptionFilter.stringFilter({
-          allowlist: ['Ireland', 'China']
-        }),
-        // Filter to allow only messages missing email
-        "MessageAttributes.email_exists.StringValue": sns.SubscriptionFilter.stringFilter({
-          allowlist: ['false']
-        })
-      },
       rawMessageDelivery: true
     }));
     
     // Connect QueueA to LambdaX as per the diagram
     lambdaXFn.addEventSource(new events.SqsEventSource(queueA));
     
+    // Connect QueueB to LambdaY
+    lambdaYFn.addEventSource(new events.SqsEventSource(queueB));
    
+    // Grant necessary permissions
     table.grantReadWriteData(lambdaXFn);
     topic1.grantPublish(lambdaXFn);
   }
