@@ -111,6 +111,8 @@ export class ExamStack extends cdk.Stack {
       memorySize: 128,
       environment: {
         REGION: "eu-west-1",
+        TOPIC_ARN: topic1.topicArn,
+        TABLE_NAME: table.tableName,
       },
     });
 
@@ -122,8 +124,42 @@ export class ExamStack extends cdk.Stack {
       memorySize: 128,
       environment: {
         REGION: "eu-west-1",
+        TABLE_NAME: table.tableName,
       },
     });
     
+    // Connect Topic1 to QueueA and QueueB as per the diagram
+    
+    // Part B: Only allow messages with country=Ireland or China to Queue A
+    topic1.addSubscription(new subs.SqsSubscription(queueA, {
+      filterPolicy: {
+        // This filter matches the nested path address.country
+        "address.country": sns.SubscriptionFilter.stringFilter({
+          allowlist: ['Ireland', 'China']
+        })
+      },
+      rawMessageDelivery: true // Ensures messages are delivered without SNS envelope
+    }));
+    
+    // Part C: Queue B should receive messages missing an email property
+    // but still from Ireland or China
+    topic1.addSubscription(new subs.SqsSubscription(queueB, {
+      filterPolicy: {
+        // This filter matches the nested path address.country
+        "address.country": sns.SubscriptionFilter.stringFilter({
+          allowlist: ['Ireland', 'China']
+        }),
+        // Unfortunately, SNS doesn't support direct "attribute doesn't exist" filtering
+        // We'll need to handle this in the Lambda function for Queue B
+      },
+      rawMessageDelivery: true
+    }));
+    
+    // Connect QueueA to LambdaX as per the diagram
+    lambdaXFn.addEventSource(new events.SqsEventSource(queueA));
+    
+    // Grant necessary permissions
+    table.grantReadWriteData(lambdaXFn);
+    topic1.grantPublish(lambdaXFn);
   }
 }
