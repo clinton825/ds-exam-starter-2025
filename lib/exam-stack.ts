@@ -72,6 +72,15 @@ export class ExamStack extends cdk.Stack {
 
     const anEndpoint = api.root.addResource("patha");
 
+    // Grant the lambda function permissions to access the DynamoDB table
+    table.grantReadWriteData(question1Fn);
+
+    // Add new endpoint for the exam question: GET /crew/{role}/movies/{movieId}
+    const crewEndpoint = api.root.addResource("crew");
+    const crewRoleEndpoint = crewEndpoint.addResource("{role}");
+    const crewRoleMoviesEndpoint = crewRoleEndpoint.addResource("movies");
+    const crewRoleMovieIdEndpoint = crewRoleMoviesEndpoint.addResource("{movieId}");
+    crewRoleMovieIdEndpoint.addMethod("GET", new apig.LambdaIntegration(question1Fn));
 
     // ==================================
     // Question 2 - Event-Driven architecture
@@ -118,4 +127,3 @@ export class ExamStack extends cdk.Stack {
     
   }
 }
-  
